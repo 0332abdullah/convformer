@@ -200,7 +200,7 @@ class Model(nn.Module):
         self.CTB = nn.ModuleList([nn.Sequential(
             CT_block(dim = dim, hidden_dim = hidden_dim, kernel_size = kernel_size, indim = indim, outdim = outdim),
             nn.Dropout(p = 0.2)
-         ) for i in range(numblocks)])
+            ) for i in range(numblocks)])
         self.final = nn.Sequential(
             nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
