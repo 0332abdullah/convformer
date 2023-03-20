@@ -1,7 +1,7 @@
 '''
 Import packages
-
 '''
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -77,7 +77,6 @@ class Transformer(nn.Module):
         x = self.ff(x) + x
         return x
 
-
 class DepthwiseConv(nn.Module):
     def __init__(self, dim, kernel_size):
         super().__init__()
@@ -106,34 +105,21 @@ class PointwiseConv(nn.Module):
             x = self.layer(x)
         return x
 
-
 class Encodings(nn.Module):
     def __init__(self, *,  image_size, patch_size, dim, channels = 3, dim_head = 64, emb_dropout = 0.):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
-
         assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
-
-        
         patches_up, patches_across = (image_height // patch_height), (image_width // patch_width)
-
         patch_dim = channels * patch_height * patch_width
-    
-        
-
         assert dim >= patch_dim
-
-        
-
         self.to_patch_embedding = nn.Sequential(
             Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_height, p2 = patch_width),
             nn.Linear(patch_dim, dim),
             Rearrange('b (h w) (d) -> b h w (d)', h = patches_up, w = patches_across)
         )
-
         self.pos_embedding = nn.Parameter(torch.randn(1, patches_up, patches_across, dim))
-
         self.dropout = nn.Dropout(emb_dropout)
     def forward(self, img):
         x = self.to_patch_embedding(img)
@@ -145,7 +131,7 @@ class Encodings(nn.Module):
 class CT_block_inline(nn.Module):
     def __init__(self, *, dim, hidden_dim, kernel_size, indim, outdim, heads = 8, dim_head = 64, dropout = 0):
         super().__init__()
-        
+
         self.T = Transformer(dim = dim, hidden_dim = dim)
         self.DC = DepthwiseConv(dim = dim, kernel_size = kernel_size)
         self.PC = PointwiseConv(indim = indim, outdim = outdim)
@@ -204,10 +190,11 @@ class ConvMixer_block(nn.Module):
 
 
 
+
 class Model(nn.Module):
     def __init__(self, *, image_size, patch_size, dim, hidden_dim, kernel_size, indim, outdim, numblocks, block_type, heads = 8, dim_head = 64, dropout = 0,channels = 3,  emb_dropout = 0., num_classes = 10):
         super().__init__()
-        block_types = {'inline':CT_block_inline, 'concat':CT_block_parallel_concat, 'mm':CT_block_parallel_mm, 'pct': PCT_block, 'cm':ConvMixer_block}
+        block_types = {'inline':CT_block_inline, 'concat':CT_block_parallel_concat, 'mm':CT_block_parallel_mm, 'pct': PCT_block, 'cm':ConvMixer_block , 'vt': Transformer}
         CT_block = block_types[block_type]
         self.enc = Encodings(image_size = image_size, patch_size = patch_size, dim = dim, channels = channels)
         self.CTB = nn.ModuleList([nn.Sequential(
@@ -227,4 +214,3 @@ class Model(nn.Module):
             x = block(x) + x
         x = self.final(x)
         return x
-
