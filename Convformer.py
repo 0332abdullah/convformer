@@ -197,10 +197,17 @@ class Model(nn.Module):
         block_types = {'inline':CT_block_inline, 'concat':CT_block_parallel_concat, 'mm':CT_block_parallel_mm, 'pct': PCT_block, 'cm':ConvMixer_block , 'vt': Transformer}
         CT_block = block_types[block_type]
         self.enc = Encodings(image_size = image_size, patch_size = patch_size, dim = dim, channels = channels)
-        self.CTB = nn.ModuleList([nn.Sequential(
-            CT_block(dim = dim, hidden_dim = hidden_dim, kernel_size = kernel_size, indim = indim, outdim = outdim),
-            nn.Dropout(p = 0.2)
-            ) for i in range(numblocks)])
+        if block_type != 'vt':
+            self.CTB = nn.ModuleList([nn.Sequential(
+                CT_block(dim = dim, hidden_dim = hidden_dim, kernel_size = kernel_size, indim = indim, outdim = outdim),
+                nn.Dropout(p = 0.2)
+                ) for i in range(numblocks)])
+        elif block_type == 'vt':
+            nn.ModuleList([nn.Sequential(
+                CT_block(dim = dim, hidden_dim = hidden_dim),
+                nn.Dropout(p = 0.2)
+                ) for i in range(numblocks)])
+
         self.final = nn.Sequential(
             nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
