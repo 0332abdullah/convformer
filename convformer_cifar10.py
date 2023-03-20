@@ -38,7 +38,7 @@ for ps in pss:
         for depth in depths:
             params.append({'block_type':block_type, 'depth':depth, 'patch_size':(ps,ps)})
 
-params.append({'block_type':'concat', 'depth':20, 'patch_size':(4,4)})
+params.append({'block_type':'concat', 'depth':6, 'patch_size':(8,8)})
 
 
 
@@ -49,7 +49,7 @@ get on gpu
 '''
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
 
@@ -81,10 +81,11 @@ define training
 def train(model, device, epochs, trainloader, testloader, verbose = False):
 
     start_time = time.time()
+    model= nn.DataParallel(model)
     model = model.to(device)    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
-    lambda1 = lambda epoch: 0.89**(1.25*epoch)
+    lambda1 = lambda epoch: 0.87**(1.75*epoch)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,lambda1)
     train_accs = np.zeros(epochs)
     test_accs = np.zeros(epochs)
@@ -109,8 +110,8 @@ def train(model, device, epochs, trainloader, testloader, verbose = False):
             train_total += target.size(0)
             if batch_idx%100 == 0 and verbose:
                 print(f'Loss: {loss.item()}')
-        if epoch % 4 == 0:
-            scheduler.step()
+        
+        scheduler.step()
         test_correct = 0
         test_total = 0
         with torch.no_grad():
@@ -142,7 +143,7 @@ if not os.path.exists(newpath):
 
 num_models_done = len(os.listdir('./results'))
 
-epochs = 75
+epochs = 100
 for param in params[num_models_done:]:
     print(param)
     model = get_model(param['block_type'],param['depth'],param['patch_size'])
