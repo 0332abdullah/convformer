@@ -203,7 +203,7 @@ class Model(nn.Module):
                 nn.Dropout(p = 0.2)
                 ) for i in range(numblocks)])
         elif block_type == 'vt':
-            nn.ModuleList([nn.Sequential(
+            self.CTB = nn.ModuleList([nn.Sequential(
                 CT_block(dim = dim, hidden_dim = hidden_dim),
                 nn.Dropout(p = 0.2)
                 ) for i in range(numblocks)])
