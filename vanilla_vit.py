@@ -81,9 +81,10 @@ def train(model, device, epochs, trainloader, testloader, verbose = False):
     start_time = time.time()
     model = model.to(device)    
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
-    lambda1 = lambda epoch: 0.89**(1.25*epoch)
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,lambda1)
+    lr = 0.001
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    lambda1 = lambda epoch: 0.89**(2*epoch)
+    #scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,lambda1)
     train_accs = np.zeros(epochs)
     test_accs = np.zeros(epochs)
     for epoch in range(epochs):
@@ -101,14 +102,14 @@ def train(model, device, epochs, trainloader, testloader, verbose = False):
             outputs = model(data)
             loss = criterion(outputs, target)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
             optimizer.step()
             _, preds = torch.max(outputs.data, 1)
             train_correct += (preds == target).sum().item()
             train_total += target.size(0)
             if batch_idx%100 == 0 and verbose:
                 print(f'Loss: {loss.item()}')
-        if epoch % 4 == 0:
-            scheduler.step()
+        #scheduler.step()
         test_correct = 0
         test_total = 0
         with torch.no_grad():
@@ -124,6 +125,11 @@ def train(model, device, epochs, trainloader, testloader, verbose = False):
         train_acc, test_acc = train_correct/train_total, test_correct/test_total
         train_accs[epoch] = train_acc
         test_accs[epoch] = test_acc
+        if epoch >= 2 and False:
+            if test_accs[epoch] - test_accs[epoch-1] < 0.01:
+                lr = lr * 0.75
+                for g in optimizer.param_groups:
+                    g['lr'] = lr
         print(f'Epoch: {epoch + 1}, Train Acc: {train_acc}, Test Acc: {test_acc}')
     total_time = time.time() - start_time
     return train_accs, test_accs, {'time':total_time/epochs, 'params': sum(p.numel() for p in model.parameters())} 
