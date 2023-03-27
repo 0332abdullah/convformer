@@ -68,13 +68,14 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 class Transformer(nn.Module):
-    def __init__(self, dim, hidden_dim, heads = 8, dim_head = 64, dropout = 0.):
+    def __init__(self, dim, hidden_dim, patch_size, heads = 8, dim_head = 64, dropout = 0. ):
         super().__init__()
         self.atn = Attention(dim, heads, dim_head, dropout)
         self.ff = FeedForward(dim, hidden_dim, dropout)
+        self.layer_norm = nn.LayerNorm([dim, 32//patch_size, 32//patch_size])
     def forward(self, x):
-        x = self.atn(x) + x
-        x = self.ff(x) + x
+        x = self.layer_norm(self.atn(x) + x)
+        x = self.layer_norm(self.ff(x) + x)
         return x
 
 class DepthwiseConv(nn.Module):
@@ -192,7 +193,7 @@ class ConvMixer_block(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, *, image_size, patch_size, dim, hidden_dim, kernel_size, indim, outdim, numblocks, block_type, heads = 8, dim_head = 64, dropout = 0,channels = 3,  emb_dropout = 0., num_classes = 10):
+    def __init__(self, *, image_size, patch_size, dim, hidden_dim, kernel_size, indim, outdim, numblocks, block_type, heads = 8, dim_head = 64, dropout = 0.2,channels = 3,  emb_dropout = 0., num_classes = 10):
         super().__init__()
         block_types = {'inline':CT_block_inline, 'concat':CT_block_parallel_concat, 'mm':CT_block_parallel_mm, 'pct': PCT_block, 'cm':ConvMixer_block , 'vt': Transformer}
         CT_block = block_types[block_type]
@@ -204,14 +205,13 @@ class Model(nn.Module):
                 ) for i in range(numblocks)])
         elif block_type == 'vt':
             self.CTB = nn.ModuleList([nn.Sequential(
-                CT_block(dim = dim, hidden_dim = hidden_dim),
+                CT_block(dim = dim, hidden_dim = hidden_dim, patch_size = patch_size[0]),
                 nn.Dropout(p = 0.2)
                 ) for i in range(numblocks)])
 
         self.final = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
-            nn.Linear(dim, 100),
+            nn.Linear(dim * (32//patch_size[0])**2, 100),
             nn.GELU(),
             nn.Linear(100, num_classes)
         )
