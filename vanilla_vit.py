@@ -145,7 +145,7 @@ if not os.path.exists(newpath):
 
 num_models_done = len(os.listdir('./vit_results'))
 epochs = 100
-for param in params[num_models_done:]:
+for param in params:
     print(param)
     model = get_model(param['block_type'],param['depth'],param['patch_size'])
     train_accs, test_accs, info = train(model = model, device = device, epochs = epochs, trainloader = trainloader, testloader = testloader)
