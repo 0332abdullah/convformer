@@ -20,7 +20,7 @@ import pandas as pd
 #these parameters are determined by the shape of the data (except for kernel_size, thats just always 3)
 image_size = (32,32)
 channels = 3
-kernel_size = 3
+
 
 #set batch size
 batch_size = 512
@@ -28,10 +28,11 @@ batch_size = 512
 
 def get_model(block_type, depth, patch_size = (4,4)):
     dim = patch_size[0] * patch_size[1] *3+2 #+2 for the position embedding
-    return CF.Model(image_size = image_size, patch_size = patch_size, dim = dim, hidden_dim = dim, kernel_size = kernel_size, indim = dim, outdim = dim, numblocks = depth, block_type = block_type)
+    return CF.Model(image_size = image_size, patch_size = patch_size, dim = dim, hidden_dim = dim, 
+                    _size = kernel_size, indim = dim, outdim = dim, numblocks = depth, block_type = block_type)
 
 params = []
-depths = [1,6,9]
+depths = [3]
 block_types = ['vt']
 pss = [2,4]
 for ps in pss:
@@ -42,6 +43,7 @@ for ps in pss:
 #params.append({'block_type':'concat', 'depth':20, 'patch_size':(4,4)})
 
 
+params = [{'block_type': 'vt', 'depth':3, 'patch_size':(4,4)}]
 '''
 get on gpu
 '''
@@ -136,7 +138,7 @@ if not os.path.exists(newpath):
     os.makedirs(newpath)
 
 num_models_done = len(os.listdir('./vit_results'))
-epochs = 75
+epochs = 100
 for param in params[num_models_done:]:
     print(param)
     model = get_model(param['block_type'],param['depth'],param['patch_size'])
